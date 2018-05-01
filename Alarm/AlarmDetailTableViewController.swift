@@ -2,76 +2,49 @@
 //  AlarmDetailTableViewController.swift
 //  Alarm
 //
-//  Created by James Pacheco on 5/6/16.
-//  Copyright © 2016 DevMountain. All rights reserved.
+//  Created by Michael Duong on 1/22/18.
+//  Copyright © 2018 Turnt Labs. All rights reserved.
 //
 
 import UIKit
 
 class AlarmDetailTableViewController: UITableViewController, AlarmScheduler {
     
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        updateViews()
-    }
+    @IBOutlet weak var datePicker: UIDatePicker!
+    @IBOutlet weak var alarmName: UITextField!
+    @IBOutlet weak var enableButton: UIButton!
     
-    // MARK: Actions
-    
-    @IBAction func saveButtonTapped(_ sender: Any) {
-        guard let title = alarmTitleTextField.text,
-            let thisMorningAtMidnight = DateHelper.thisMorningAtMidnight else { return }
-        let timeIntervalSinceMidnight = alarmDatePicker.date.timeIntervalSince(thisMorningAtMidnight)
+    @IBAction func saveButtonTapped(_ sender: UIBarButtonItem) {
+        guard let title = alarmName.text,
+            let thisMorningMidnight = DateHelper.thisMorningAtMidnight else { return }
+        let timeIntervalSinceMidnight = datePicker.date.timeIntervalSince(thisMorningMidnight)
+        
         if let alarm = alarm {
             AlarmController.shared.update(alarm: alarm, fireTimeFromMidnight: timeIntervalSinceMidnight, name: title)
             cancelUserNotifications(for: alarm)
-            scheduleUserNotifications(for: alarm)
         } else {
             let alarm = AlarmController.shared.addAlarm(fireTimeFromMidnight: timeIntervalSinceMidnight, name: title)
             self.alarm = alarm
             scheduleUserNotifications(for: alarm)
         }
-        let _ = navigationController?.popViewController(animated: true)
+        self.navigationController?.popViewController(animated: true)
     }
     
-    @IBAction func enableButtonTapped(_ sender: Any) {
+    @IBAction func enableButtonTapped(_ sender: UIButton) {
         guard let alarm = alarm else { return }
         AlarmController.shared.toggleEnabled(for: alarm)
         if alarm.enabled {
-            scheduleUserNotifications(for: alarm)
+        scheduleUserNotifications(for: alarm)
         } else {
             cancelUserNotifications(for: alarm)
         }
         updateViews()
     }
     
-    // MARK: Private
-    
-    private func updateViews() {
-        guard let alarm = alarm,
-            let thisMorningAtMidnight = DateHelper.thisMorningAtMidnight,
-            isViewLoaded else {
-                enableButton.isHidden = true
-                return
-        }
-        
-        alarmDatePicker.setDate(Date(timeInterval: alarm.fireTimeFromMidnight, since: thisMorningAtMidnight), animated: false)
-        alarmTitleTextField.text = alarm.name
-        
-        enableButton.isHidden = false
-        if alarm.enabled {
-            enableButton.setTitle("Disable", for: UIControlState())
-            enableButton.setTitleColor(.white, for: UIControlState())
-            enableButton.backgroundColor = .red
-        } else {
-            enableButton.setTitle("Enable", for: UIControlState())
-            enableButton.setTitleColor(.blue, for: UIControlState())
-            enableButton.backgroundColor = .gray
-        }
-        
-        self.title = alarm.name
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        updateViews()
     }
-    
-    // MARK: Properties
     
     var alarm: Alarm? {
         didSet {
@@ -81,7 +54,28 @@ class AlarmDetailTableViewController: UITableViewController, AlarmScheduler {
         }
     }
     
-    @IBOutlet weak var alarmDatePicker: UIDatePicker!
-    @IBOutlet weak var alarmTitleTextField: UITextField!
-    @IBOutlet weak var enableButton: UIButton!
+    private func updateViews() {
+        guard let alarm = alarm, let thisMorningAtMidnight = DateHelper.thisMorningAtMidnight, isViewLoaded else {
+            enableButton.isHidden = true
+            return
+        }
+
+        datePicker.setDate(Date(timeInterval: alarm.fireTimeFromMidnight, since: thisMorningAtMidnight), animated: false)
+        
+            alarmName.text = alarm.name
+        
+            enableButton.isHidden = false
+            if alarm.enabled {
+            enableButton.setTitle("Disable", for: UIControlState())
+            enableButton.setTitleColor(.white, for: UIControlState())
+            enableButton.backgroundColor = .red
+        }
+            else {
+            enableButton.setTitle("Enable", for: UIControlState())
+            enableButton.setTitleColor(.blue, for: UIControlState())
+            enableButton.backgroundColor = .gray
+        }
+        
+        self.title = alarm.name
+    }
 }

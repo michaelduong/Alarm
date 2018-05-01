@@ -2,64 +2,88 @@
 //  AlarmListTableViewController.swift
 //  Alarm
 //
-//  Created by James Pacheco on 5/6/16.
-//  Copyright © 2016 DevMountain. All rights reserved.
+//  Created by Michael Duong on 1/22/18.
+//  Copyright © 2018 Turnt Labs. All rights reserved.
 //
 
 import UIKit
 
 class AlarmListTableViewController: UITableViewController, SwitchTableViewCellDelegate, AlarmScheduler {
     
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        tableView.reloadData()
-    }
-    
-    // MARK: UITableViewDataSource
-    
-    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return AlarmController.shared.alarms.count
-    }
-    
-    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "alarmCell", for: indexPath) as? SwitchTableViewCell ?? SwitchTableViewCell()
-        
-		cell.alarm = AlarmController.shared.alarms[indexPath.row]
-        cell.delegate = self
-        
-        return cell
-    }
-	
-    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCellEditingStyle, forRowAt indexPath: IndexPath) {
-        if editingStyle == .delete {
-            let alarm = AlarmController.shared.alarms[indexPath.row]
-			AlarmController.shared.delete(alarm: alarm)
-            cancelUserNotifications(for: alarm)
-            tableView.deleteRows(at: [indexPath], with: .fade)
-        }
-    }
-    
-    // MARK: SwitchTableViewCellDelegate
-    
-    func switchCellSwitchValueChanged(cell: SwitchTableViewCell) {
+    func switchValueChanged(cell: SwitchTableViewCell) {
         guard let indexPath = tableView.indexPath(for: cell) else { return }
+        
         let alarm = AlarmController.shared.alarms[indexPath.row]
-		AlarmController.shared.toggleEnabled(for: alarm)
+        AlarmController.shared.toggleEnabled(for: alarm)
+        
         if alarm.enabled {
             scheduleUserNotifications(for: alarm)
         } else {
             cancelUserNotifications(for: alarm)
         }
-        tableView.reloadRows(at: [indexPath], with: .automatic)
+        
+        tableView.reloadData()
+        }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        tableView.reloadData()
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+    }
+
+
+    // MARK: - Table view data source
+
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return AlarmController.shared.alarms.count
     }
     
-    // MARK: Navigation
     
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "AlarmsCell", for: indexPath) as? SwitchTableViewCell
+        
+        cell?.delegate = self
+        
+        cell?.alarm = AlarmController.shared.alarms[indexPath.row]
+        
+        return cell ?? UITableViewCell()
+    }
+        
+
+    
+    // Override to support editing the table view.
+    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCellEditingStyle, forRowAt indexPath: IndexPath) {
+        if editingStyle == .delete {
+            let alarmtoDelete = AlarmController.shared.alarms[indexPath.row]
+            
+            AlarmController.shared.delete(alarm: alarmtoDelete)
+            cancelUserNotifications(for: alarmtoDelete)
+            tableView.reloadData()
+        }
+    }
+    
+
+
+    
+    // MARK: - Navigation
+
+    // In a storyboard-based application, you will often want to do a little preparation before navigation
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        if segue.identifier == "toAlarmDetail" {
-			guard let detailVC = segue.destination as? AlarmDetailTableViewController,
-			let indexPath = tableView.indexPathForSelectedRow else { return }
-            detailVC.alarm = AlarmController.shared.alarms[indexPath.row]
+        // Get the new view controller using segue.destinationViewController.
+        if segue.identifier == "toAlarmDetails" {
+            // Pass the selected object to the new view controller.
+            guard let destination = segue.destination as? AlarmDetailTableViewController else { return }
+            
+            guard let indexPath = tableView.indexPathForSelectedRow else { return }
+            
+            let alarmId = AlarmController.shared.alarms[indexPath.row]
+            
+            destination.alarm = alarmId
+            
         }
     }
 }

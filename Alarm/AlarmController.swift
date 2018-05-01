@@ -2,61 +2,75 @@
 //  AlarmController.swift
 //  Alarm
 //
-//  Created by James Pacheco on 5/9/16.
-//  Copyright © 2016 DevMountain. All rights reserved.
+//  Created by Michael Duong on 1/22/18.
+//  Copyright © 2018 Turnt Labs. All rights reserved.
 //
 
+import Foundation
 import UIKit
 import UserNotifications
 
+
 class AlarmController {
     
-    static let shared = AlarmController()
+    static var shared = AlarmController()
+    
+    var alarms: [Alarm] = []
+    
+    let mockAlarms: [Alarm] = {
+        return [
+            Alarm(fireTimeFromMidnight: 7, name: "Alarm One"),
+            Alarm(fireTimeFromMidnight: 8, name: "Alarm Two"),
+            Alarm(fireTimeFromMidnight: 9, name: "Alarm Three")
+        ]
+    }()
     
     init() {
-        loadFromPersistentStorage()
+        self.alarms = self.mockAlarms
+
+        loadToPersistentStorage()
     }
     
-    // MARK: Model Controller Methods
-    
     func addAlarm(fireTimeFromMidnight: TimeInterval, name: String) -> Alarm {
-        let alarm = Alarm(fireTimeFromMidnight: fireTimeFromMidnight, name: name)
-        alarms.append(alarm)
+        let newAlarm = Alarm(fireTimeFromMidnight: fireTimeFromMidnight, name: name)
+        alarms.append(newAlarm)
+        
         saveToPersistentStorage()
-        return alarm
+        
+        return newAlarm
+        
     }
     
     func update(alarm: Alarm, fireTimeFromMidnight: TimeInterval, name: String) {
         alarm.fireTimeFromMidnight = fireTimeFromMidnight
         alarm.name = name
+        
         saveToPersistentStorage()
     }
     
     func delete(alarm: Alarm) {
         guard let index = alarms.index(of: alarm) else { return }
         alarms.remove(at: index)
+        
         saveToPersistentStorage()
     }
     
     func toggleEnabled(for alarm: Alarm) {
         alarm.enabled = !alarm.enabled
+        
         saveToPersistentStorage()
     }
-    
-    // MARK: Load/Save
     
     private func saveToPersistentStorage() {
         guard let filePath = type(of: self).persistentAlarmsFilePath else { return }
         NSKeyedArchiver.archiveRootObject(self.alarms, toFile: filePath)
     }
     
-    private func loadFromPersistentStorage() {
+    private func loadToPersistentStorage() {
         guard let filePath = type(of: self).persistentAlarmsFilePath else { return }
         guard let alarms = NSKeyedUnarchiver.unarchiveObject(withFile: filePath) as? [Alarm] else { return }
         self.alarms = alarms
     }
-    
-    // MARK: Helpers
     
     static private var persistentAlarmsFilePath: String? {
         let directories = NSSearchPathForDirectoriesInDomains(.documentDirectory, .allDomainsMask, true)
@@ -64,13 +78,7 @@ class AlarmController {
         return documentsDirectory.appendingPathComponent("Alarms.plist")
     }
     
-    // MARK: Properties
-    
-    var alarms: [Alarm] = []
-
 }
-
-// MARK: - AlarmScheduler
 
 protocol AlarmScheduler {
     func scheduleUserNotifications(for alarm: Alarm)
@@ -78,22 +86,21 @@ protocol AlarmScheduler {
 }
 
 extension AlarmScheduler {
-    
     func scheduleUserNotifications(for alarm: Alarm) {
-        
-        let notificationContent = UNMutableNotificationContent()
-        notificationContent.title = "Time's up!"
-        notificationContent.body = "Your alarm titled \(alarm.name) is done"
-        notificationContent.sound = UNNotificationSound.default()
+        let content = UNMutableNotificationContent()
+        content.title = "Time's Up!"
+        content.body = "Your alarm \(alarm.name) triggered."
+        content.sound = UNNotificationSound.default()
         
         guard let fireDate = alarm.fireDate else { return }
         let triggerDate = Calendar.current.dateComponents([.hour, .minute, .second], from: fireDate)
         let trigger = UNCalendarNotificationTrigger(dateMatching: triggerDate, repeats: true)
         
-        let request = UNNotificationRequest(identifier: alarm.uuid, content: notificationContent, trigger: trigger)
-        UNUserNotificationCenter.current().add(request) { (error) in
+        let identifier = alarm.uuid
+        let notificationRequest = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(notificationRequest) { (error) in
             if let error = error {
-                print("Unable to add notification request, \(error.localizedDescription)")
+                print("Error adding notification request: \(error.localizedDescription)")
             }
         }
     }
@@ -102,3 +109,5 @@ extension AlarmScheduler {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [alarm.uuid])
     }
 }
+
+
